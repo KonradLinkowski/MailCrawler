@@ -3,22 +3,29 @@ const axios = require('axios')
 
 class Crawler {
   constructor() {
-    this.mailRegex = /[a-z0-9._+-]+(@|\[at\])[a-z0-9._+-]+\.[a-z0-9._+-]+/gi
-    this.linkRegex = /https?:\/\/(www\.)?[a-z0-9._+-]+\.[a-z0-9._+-]+/gi
+    this.mailRegex = /[a-z0-9._+-]+(@|\[at\])[a-z0-9_+-]+(\.[a-z0-9_+-]+)+/gi
+    this.linkRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi
+    this.hostRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}/gi
+    this.noPageRegex = /\.(jpg|png|gif|mp4|mp3|wav|css|js|webm|ogg|ico)$/gi
     this.visitedLinks = []
     this.visitedMails = []
     this.data = ''
+    this.index = 0
   }
   async search(link) {
-    this.data = (await axios.get(link)).data
+    const response = await axios.get(link, { transformResponse: res => res })
+    this.data = response.data
+    this.index += 1
   }
   retrieveLinks() {
-    const retrieved = [... new Set(this.data.match(this.linkRegex))].filter(e => !this.visitedLinks.includes(e))
+    const retrieved = [... new Set(this.data.match(this.linkRegex))].filter(e => !e.match(this.noPageRegex) && !this.visitedLinks.includes(e))
+    const hosts = [... new Set(retrieved.map(e => e.match(this.hostRegex)))]
     Array.prototype.push.apply(this.visitedLinks, retrieved)
+    Array.prototype.push.apply(this.visitedMails, hosts)
     return retrieved
   }
   retrieveMails() {
-    const retrieved = [... new Set(this.data.match(this.mailRegex))].filter(e => !this.visitedMails.includes(e))
+    const retrieved = [... new Set(this.data.match(this.mailRegex))].filter(e => !e.match(this.noPageRegex) && !this.visitedMails.includes(e))
     Array.prototype.push.apply(this.visitedMails, retrieved)
     return retrieved
   }
@@ -31,7 +38,7 @@ const save = (url, links, mails) => {
     fs.appendFile('links.txt',
     '\n  '
     + url
-    + ':\n'
+    + '\n'
     + links.join('\n')
     + '\n'
     , () => {})
@@ -41,7 +48,7 @@ const save = (url, links, mails) => {
     fs.appendFile('mails.txt',
     '\n  '
     + url
-    + ':\n'
+    + '\n'
     + mails.join('\n')
     + '\n'
     , () => {})
@@ -60,11 +67,14 @@ const start = async (link) => {
       await crawler.search(url)
       const links = crawler.retrieveLinks()
       const mails = crawler.retrieveMails()
+      console.log('index:', crawler.index)
+      console.log(url)
       save(url, links, mails)
       if (links) {
         Array.prototype.push.apply(linkQueue, links)
       }
     } catch (error) {
+      console.log(url)
       console.error(error.message)
     }
   }
