@@ -4,7 +4,8 @@ const axios = require('axios')
 class Crawler {
   constructor() {
     this.mailRegex = /[a-z0-9._+-]+(@|\[at\])[a-z0-9_+-]+(\.[a-z0-9_+-]+)+/gi
-    this.linkRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi
+    this.linkRegex = 
+    
     this.hostRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}/gi
     this.noPageRegex = /\.(jpg|png|gif|mp4|mp3|wav|css|js|webm|ogg|ico)$/gi
     this.visitedLinks = []
@@ -35,7 +36,7 @@ const save = (url, links, mails) => {
   console.log('url:', url)
   console.log('links', links)
   if (links && links.length) {
-    fs.appendFile('links.txt',
+    fs.appendFile('dist/links.txt',
     '\n  '
     + url
     + '\n'
@@ -45,7 +46,7 @@ const save = (url, links, mails) => {
   }
   console.log('mails', mails)
   if (mails && mails.length) {
-    fs.appendFile('mails.txt',
+    fs.appendFile('dist/mails.txt',
     '\n  '
     + url
     + '\n'

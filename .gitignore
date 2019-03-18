@@ -1,4 +1,3 @@
-node_modules
-temp
-mails.txt
-links.txt
+node_modules/
+temp/
+dist/
