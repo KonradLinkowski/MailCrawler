@@ -5,6 +5,10 @@ const LinkSchema = new mongoose.Schema({
     type: String,
     unique: true,
     required: true
+  },
+  processed: {
+    type: String,
+    required: true
   }
 })
 

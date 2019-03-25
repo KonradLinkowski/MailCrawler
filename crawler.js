@@ -55,14 +55,23 @@ class Crawler {
 
 const save = async (url, links, mails) => {
   console.log('url:', url)
-  console.log('links', links)
-  if (links && links.length) {
-    await Link.insertMany(links.map(url => { return { url } }))
+  try {
+    if (links && links.length) {
+      console.log('links', links)
+      await Link.insertMany(links.map(url => { return { url, processed: 'no' } }), { ordered: false })
+    }
+  } catch (error) {
+    console.error(error.message)
   }
-  console.log('mails', mails)
-  if (mails && mails.length) {
-    await Mail.insertMany(mails.map(mail => { return { mail } }))
+  try {
+    console.log('mails', mails)
+    if (mails && mails.length) {
+      await Mail.insertMany(mails.map(mail => { return { mail } }), { ordered: false })
+    }
+  } catch (error) {
+    console.error(error.message)
   }
+  await Link.update({ url }, { processed: 'yes' } )
 }
 
 const start = async (link) => {
@@ -71,8 +80,9 @@ const start = async (link) => {
   while (true) {
     let url = linkQueue.shift()
     if (!url) {
-      const count = await Link.collection.countDocuments()
-      url = (await Link.findOne().skip(Math.floor(Math.random() * count))).url
+      const links = await Link.find({ processed: 'no' }).limit(100)
+      Array.prototype.push.apply(linkQueue, links.map(obj => obj.url))
+      url = linkQueue.shift()
     }
     console.log('next:', url)
     try {
@@ -81,20 +91,14 @@ const start = async (link) => {
       const links = await crawler.retrieveLinks()
       const mails = await crawler.retrieveMails()
       console.log('index:', crawler.index)
-      console.log(url)
       await save(url, links, mails)
-      if (links) {
-        Array.prototype.push.apply(linkQueue, links)
-      }
     } catch (error) {
       console.log(url)
       console.error(error.message)
       if (error.response && error.response.status === 429) {
         linkQueue.length = 0
-      }
-      if (['ENOTFOUND'].includes(error.code) || (error.response && error.response.status >= 400)) {
-        console.log('deleting:', url)
-        await Link.deleteOne({ url })
+      } else if (['ENOTFOUND'].includes(error.code) || (error.response && error.response.status >= 400)) {
+        await Link.update({ url }, { processed: 'unavailable' })
       }
     }
   }
